@@ -48,7 +48,9 @@ cleaning <- cleaning[!is.na(`COVID-19 Deaths`)]
 cleaning <- cleaning[!is.na(`Total Deaths`)]
 ```
 
-View and download the Data: [https://data.cdc.gov/NCHS/Provisional-COVID-19-Deaths-by-Sex-and-Age/9bhg-hcku)](https://data.cdc.gov/NCHS/Provisional-COVID-19-Deaths-by-Sex-and-Age/9bhg-hcku))
+View and download the data([https://data.cdc.gov/NCHS/Provisional-COVID-19-Deaths-by-Sex-and-Age/9bhg-hcku](https://data.cdc.gov/NCHS/Provisional-COVID-19-Deaths-by-Sex-and-Age/9bhg-hcku)))
+
+View and download the final project report (<https://github.com/incrediblecici/final/tree/main/WrittenReport>)
 
 ## Abstract
 
