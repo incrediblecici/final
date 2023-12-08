@@ -1,0 +1,232 @@
+---
+title: "Final Project: COVID-19 Death Analysis"
+author: "Weixi Pan"
+date: "`r Sys.Date()`"
+output: pdf_document
+always_allow_html: true
+---
+
+```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
+library(data.table)
+library(lubridate)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(tidyr)
+library(knitr)
+library(ggplot2)
+data <- data.table::fread("../data/Provisional_COVID-19_Deaths_by_Sex_and_Age.csv")
+
+opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  eval=TRUE,
+  echo = TRUE,
+  cache = FALSE,
+  fig.width = 7,
+  fig.align = 'center',
+  fig.asp = 0.618,
+  out.width = "700px")
+```
+
+# Introduction
+
+## Background
+
+Coronavirus disease (COVID-19) is an infectious illness caused by the SARS-CoV-2 virus. It is well-established that the majority of individuals infected with COVID-19 will undergo a mild to moderate respiratory illness and recover without necessitating specialized treatment. However, a subset of individuals may experience severe illness or succumb to the disease, regardless of age.
+
+The dataset utilized in this project is sourced from the Centers for Disease Control and Prevention (CDC) and provides information on deaths related to COVID-19, pneumonia, and influenza. These deaths are reported to the National Center for Health Statistics and are categorized by sex, age group, and jurisdiction of occurrence. The provisional counts for COVID-19 deaths are derived from the current flow of mortality data within the National Vital Statistics System. National provisional counts encompass deaths occurring in the 50 states and the District of Columbia that have been received and coded as of the specified date.
+
+## Data Description
+
+The dataset comprises 137,700 observations and encompasses 16 variables. Each row delineates COVID-19 deaths categorized by sex, age, state, year, and month. The dataset is characterized by 8 character variables and 8 integer variables.
+
+Given the incompleteness of the dataset for the year 2023, our analysis focuses exclusively on the years 2020, 2021, and 2022. The names and descriptions of these years are presented below.
+
+```{r echo=FALSE, warning= FALSE}
+variables <- data.frame(
+  Variable_Name = variable.names(data),
+  Description   = c("Date of analysis", "First date of data period","Last date of data period" ,"	
+Indicator of whether data measured by Month, by Year, or Total","Year in which death occurred","	
+Month in which death occurred","	
+Jurisdiction of occurrence","Sex","	
+Age group","	
+Deaths involving COVID-19","	
+Deaths from all causes of death","	
+Pneumonia Deaths","Deaths with Pneumonia and COVID-19","	
+Influenza Deaths","	
+Deaths with Pneumonia, Influenza, or COVID-19","	
+Suppressed counts (1-9)")
+)
+knitr::kable(variables)
+```
+
+The pivotal variables utilized in this project encompass End Date, Year, Month, State, Sex, and Age Group. The primary output variable in our analysis is COVID-19 Deaths. This dataset provides a comprehensive record of the case numbers for COVID-19 deaths in the United States, categorized by state, gender, age, and other parameters, spanning from January 1, 2020, to December 31, 2022. Subsequent sections of the analysis will delve into more specific examinations and interpretations based on these key variables.
+
+## Abstract
+
+As commonly understood, the majority of individuals infected with COVID-19 will undergo mild to moderate respiratory illness and recover without the need for specialized treatment. Nevertheless, a subset of individuals may experience severe illness or succumb to the virus, irrespective of age. The dataset utilized in this project originates from the Centers for Disease Control and Prevention (CDC) and pertains to provisional COVID-19 deaths in the United States, categorized by date, state, sex, and age groups.The primary objective of this project is to address the following questions: Does the incidence of COVID-19-related deaths exhibit a temporal decrease over time? To what extent do COVID-19-related deaths vary based on factors such as state, sex, and age group?
+
+# Methods
+
+## Data Preparation
+
+The initial step in data cleaning involves obtaining a comprehensive overview of the entire dataset. Notably, each variable within this dataset features a "summary observation" designed to provide a condensed representation of the respective variable. For instance, in the "State" column, the table includes data for individual states along with observations labeled "United States," offering a summary of the total count aggregated across other variables. Similarly, the "Sex" variable incorporates a "All Sexes" summary, and the "Age Groups" variable includes a "All Ages" summary.
+
+In preparation for subsequent analyses, it is imperative to selectively choose key variables for utilization and filter out these summary observations to eliminate redundancy. This strategic approach ensures a focused and streamlined dataset, enhancing the accuracy and precision of future analyses.
+
+```{r echo=FALSE, warning= FALSE}
+cleaning <- select(data, 3:11)
+cleaning <- filter(cleaning, Group == "By Month", State != "United States", Sex != "All Sexes", `Age Group` != "All Ages")
+cleaning <- cleaning[!is.na(`COVID-19 Deaths`)]
+cleaning <- cleaning[!is.na(`Total Deaths`)]
+```
+
+Following the exclusion of "summary rows" and the removal of missing values, the subsequent step involves scrutinizing the dataset for irregular values and subsequently eliminating them. Specifically focusing on the "COVID-19 Deaths" column in the refined dataset, a summary analysis reveals the absence of negative values. However, the maximum value is notably elevated, reaching 2944.
+
+To further investigate and address potential outliers, a box plot analysis was conducted. This examination identified several exceptionally large values surpassing 2500. As a corrective measure, these outliers were filtered out, yielding refined results as detailed below.
+
+```{r echo=FALSE, warning=FALSE}
+summary<- summary(cleaning$`COVID-19 Deaths`)
+boxplot(cleaning$`COVID-19 Deaths`,
+        xlab = "Covid-19 Deaths",
+        ylab = "Count"
+        )
+d_extreme <- filter(cleaning, `COVID-19 Deaths`> 2500)
+knitr::kable(d_extreme)
+```
+
+Upon closer examination of the table, it is apparent that these larger values correspond to January 2021 in California. Given their meaningful nature, it would be inappropriate to classify them as irregular values warranting removal. In addition to the aforementioned steps, we have also undertaken the conversion of the date variable format. This conversion enhances the ease of subsequent analysis and visualization, streamlining the dataset for more effective interpretation.
+
+```{r echo=FALSE, warning=FALSE}
+cleaning$`End Date` <- as.Date(cleaning$`End Date`, format="%m/%d/%Y")
+```
+
+## Data Analysis
+
+Now that we have obtained a clean dataset, it is opportune to proceed with data analysis. Our initial inquiry involves exploring the relationship between the number of deaths and dates. To address this, we begin by generating a summary table that delineates the data for different years.
+
+```{r echo=FALSE, warning=FALSE}
+year<-cleaning %>% group_by(Year)%>%
+  summarise(
+    Total_Death_Cases = sum(`COVID-19 Deaths`, na.rm= TRUE),
+    Avg_Death_Cases   = mean(`COVID-19 Deaths`, na.rm= TRUE), 
+    Min_Death_Cases   = min(`COVID-19 Deaths`, na.rm= TRUE),
+    Max_Death_Cases   = max(`COVID-19 Deaths`, na.rm= TRUE)
+  )
+year[3] <- round(year$Avg_Death_Cases, digits = 0)
+knitr::kable(year)
+```
+
+The table above provides a comprehensive summary of total death cases, average COVID-19 death cases, as well as the minimum and maximum values for each year. A notable observation is that 2021 emerges as the year with the highest total death data, encompassing both average and maximum values. Conversely, all values for 2022 are comparatively the smallest.
+
+To further investigate the distribution by months, a similar summary is conducted for all three years, and the results are arranged in descending order. However, the outcomes for the three years exhibit substantial differences, making it challenging to discern discernible patterns. Consequently, it can be inferred that the number of deaths exhibits little correlation with the month across these three years. To illustrate, the results for 2021 are presented in the table below, with interactive tables for all three years available on the project website.
+
+```{r echo=FALSE, warning=FALSE}
+year2021<-cleaning %>% group_by(Month)%>%filter(Year == 2021)%>%
+  summarise(
+    Total_Death_Cases = sum(`COVID-19 Deaths`, na.rm= TRUE),
+    Avg_Death_Cases   = mean(`COVID-19 Deaths`, na.rm= TRUE), 
+    Min_Death_Cases   = min(`COVID-19 Deaths`, na.rm= TRUE),
+    Max_Death_Cases   = max(`COVID-19 Deaths`, na.rm= TRUE)
+  )%>% arrange(desc(Total_Death_Cases))
+year2021[3] <- round(year2021$Avg_Death_Cases, digits = 0)
+knitr::kable(year2021)
+```
+
+To address the second question, a similar summary is conducted, stratifying the data by state and age groups. The outcomes are presented below.
+
+```{r echo=FALSE, warning=FALSE}
+state<-cleaning %>% group_by(State)%>%
+  summarise(
+    Total_Death_Cases = sum(`COVID-19 Deaths`, na.rm= TRUE),
+    Avg_Death_Cases   = mean(`COVID-19 Deaths`, na.rm= TRUE)
+  )%>% arrange(desc(Total_Death_Cases))%>%head(10)
+state[3] <- round(state$Avg_Death_Cases, digits = 0)
+knitr::kable(state)
+```
+
+In the context of states, we have chosen to display solely the top 10 results, while the full interactive dataset is available in the website Appendix. The table reveals that Texas, California, and Florida occupy the top three positions in terms of both total death cases and averages. Conversely, Vermont, Alaska, and Hawaii are the states with the lowest incidence of cases.
+
+```{r echo=FALSE, warning=FALSE}
+age<-cleaning %>% group_by(`Age Group`)%>%
+  summarise(
+    Total_Death_Cases = sum(`COVID-19 Deaths`, na.rm= TRUE),
+    Avg_Death_Cases   = mean(`COVID-19 Deaths`, na.rm= TRUE), 
+  )%>% arrange(desc(Avg_Death_Cases))
+age[3] <- round(age$Avg_Death_Cases, digits = 0)
+knitr::kable(age)
+```
+
+The table above provides a summary of death cases categorized by age group. It is evident from the table that the number of death cases exhibits a discernible increasing trend with advancing age.
+
+# Results and Discussion
+
+Following a series of cleaning, summarization, and exploration of the dataset, several visualization results for the posed questions have been derived. These results will be presented sequentially, and an interactive version of these plots will be available on the project website.
+
+### Covid-19 Deaths by Date
+
+```{r echo=FALSE, warning=FALSE, class.source="code-r-small"}
+data_p1 <-filter(data, Group == "By Month", State != "United States", Sex == "All Sexes", `Age Group` == "All Ages")
+data_p1$`End Date` <- as.Date(data_p1$`End Date`, format="%m/%d/%Y")
+p1 <- ggplot(data_p1, aes(x= `End Date`, y= `COVID-19 Deaths`, color = State)) + geom_line()+ geom_point(size= 0.5, alpha =0.5)+ xlab("Date")
+p1 <- ggplotly(p1)
+p1
+```
+
+The initial chart comprises a line plot depicting COVID-19 death cases over the date range from January 2020 to November 2022. Each distinct color within the plot corresponds to a different state, allowing for an examination of the distribution of cases across states over time. Notably, the chart reveals a discernible trend in the overall number of deaths from 2020 to 2022, exhibiting an initial increase followed by a subsequent decline. The data peaks in early 2021, with more recent death data (end of 2022) significantly lower than the levels observed during the initial spread of the virus in 2020. This suggests a substantial reduction in the death rate from COVID-19 over the specified period.
+
+When considering individual states, the region with the highest number of deaths in 2020 is New York City, as indicated by the elevated blue lines, reflecting the proximity to New York State. Post-2020, California's data experienced a rapid ascent, reaching its peak in the early part of 2021. Towards the end of 2021, there is a subsequent decline in California, with Florida and Texas emerging as states with the highest peaks. This nuanced analysis provides insights into the temporal and regional dynamics of COVID-19 death cases, offering a comprehensive view of the evolving trends across states.
+
+### Covid-19 Deaths by Ages
+
+```{r echo=FALSE, warning=FALSE, class.source="code-r-small"}
+p2<-cleaning%>%
+ggplot(aes(x=`COVID-19 Deaths`, y=fct_reorder(`Age Group`, `COVID-19 Deaths`),fill=Sex))+ geom_col(position= "dodge")+ ylab("Age Groups")
+p2 <- ggplotly(p2)
+p2
+```
+
+The chart reveals a conspicuous upward trend in the number of death cases with advancing age. Notably, the bars of various colors in the figure denote different genders, with blue representing males and red representing females. Upon closer examination, it becomes evident that, except for the age groups 55-64 and those aged over 85, the majority of other age groups exhibit a higher incidence of male deaths compared to females. This gender-related disparity is clearly illustrated in the graph, highlighting a nuanced demographic pattern within the distribution of COVID-19-related fatalities across age and gender categories.
+
+### Covid-19 Deaths by Total Deaths
+
+```{r echo=FALSE, warning=FALSE, class.source="code-r-small"}
+cleaning %>%
+  plot_ly(x= ~`COVID-19 Deaths`, y= ~`Total Deaths`, 
+          type = 'scatter',
+          mode = 'markers',
+          color = ~State,
+          marker = list(sizemode = 'sex', opacity= 0.5))
+```
+
+This plot illustrates the relationship between the number of COVID-19 deaths and the total number of deaths. Notably, a discernible correlation exists between these two variables. As the total number of deaths increases, the count of COVID-19 deaths exhibits a pattern of close-to-linear growth. This observation suggests a proportional relationship between the overall mortality rate and the specific impact of COVID-19.
+
+Examining the plot from a state-specific perspective further highlights the utility of this interactive visualization in identifying outlier data points. These distinctive observations contribute to a nuanced understanding of the variability in COVID-19-related fatalities across different states, emphasizing the significance of considering both total and COVID-19-specific mortality rates in comprehensive analyses.
+
+### Covid-19 Deaths Counts under 250
+
+```{r echo=FALSE, warning=FALSE, class.source="code-r-small"}
+data_p3 <- cleaning[`COVID-19 Deaths`<250]
+data_p3 <- data_p3[`COVID-19 Deaths`>0]
+p3<- data_p3%>% ggplot(aes(x=`COVID-19 Deaths`, fill=Sex))+ geom_histogram(position= "dodge",binwidth = 5)
+p3 <- ggplotly(p3)
+p3
+```
+
+In the analysis of sex groups, the subsequent figure presents a histogram of death cases differentiated by gender. To enhance clarity, the figure exclusively displays data with death case counts below 250, as the majority of observations in the dataset fall within this range. This approach facilitates a more intuitive indication of the gender distribution in the dataset. The histogram unmistakably illustrates that, for death cases below 250, there is a prevalent predominance of males over females.
+
+By synthesizing the insights garnered from the visualizations above, it becomes evident that, over the three-year period spanning from 2020 to 2022, the dataset reflects a higher incidence of COVID-19-related deaths among males than females. This comprehensive observation underscores the importance of considering gender disparities when examining the demographic patterns of COVID-19 fatalities.
+
+## Conclusion
+
+Over the course of the past three years, the number of COVID-19 deaths has exhibited fluctuations, indicating an upward trajectory until the inception of 2021, followed by a discernible decline. An analysis of individual states reveals that California, Texas, and Florida consistently occupy the top three positions in terms of total COVID-19 death data. Notably, New York City, California, and Florida have all experienced peaks in COVID-19 deaths at different junctures.
+
+The distribution of COVID-19 death cases reveals an age-related increase, with higher age groups demonstrating a higher incidence of fatalities. Furthermore, when considering gender, a predominant pattern emerges wherein the total number and proportion of COVID-19 deaths within the male demographic surpass those within the female demographic. These multifaceted observations offer valuable insights into the temporal, geographical, age-related, and gender-related dynamics of COVID-19 fatalities over the specified three-year period.
+
+# Reference 
+
+[1]Centers for Disease Control and Prevention, <https://www.cdc.gov/nchs/covid19/covid-19-mortality-data-files.htm>
+
+[2]Covid-19, non-Covid-19 and excess mortality rates not comparable across countries, <https://pubmed.ncbi.nlm.nih.gov/34338184>

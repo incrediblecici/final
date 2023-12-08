@@ -1,1 +1,117 @@
+---
+title: "PM566 Final Project:Covid-19"
+author: "Weixi Pan"
+output: 
+    html_document:
+        toc: TRUE
+        toc_float: TRUE
+---
 
+```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
+library(data.table)
+library(lubridate)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(knitr)
+data <- data.table::fread("data/Provisional_COVID-19_Deaths_by_Sex_and_Age.csv")
+
+opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  eval=TRUE,
+  echo = TRUE,
+  cache = FALSE,
+  fig.width = 7,
+  fig.align = 'center',
+  fig.asp = 0.618,
+  out.width = "700px")
+```
+
+```{css, echo = FALSE}
+.code-r { /* Code block */
+  font-size: 15px;
+}
+
+.code-r-small { /* Code block */
+  font-s
+  ize: 10px;
+}
+```
+
+```{r echo=FALSE, warning= FALSE}
+#data cleaning
+cleaning <- select(data, 3:11)
+cleaning <- filter(cleaning, Group == "By Month", State != "United States", Sex != "All Sexes", `Age Group` != "All Ages")
+cleaning <- cleaning[!is.na(`COVID-19 Deaths`)]
+cleaning <- cleaning[!is.na(`Total Deaths`)]
+```
+
+View and download the Data: [https://data.cdc.gov/NCHS/Provisional-COVID-19-Deaths-by-Sex-and-Age/9bhg-hcku)](https://data.cdc.gov/NCHS/Provisional-COVID-19-Deaths-by-Sex-and-Age/9bhg-hcku))
+
+## Abstract
+
+As commonly understood, the majority of individuals infected with COVID-19 will undergo mild to moderate respiratory illness and recover without the need for specialized treatment. Nevertheless, a subset of individuals may experience severe illness or succumb to the virus, irrespective of age. The dataset utilized in this project originates from the Centers for Disease Control and Prevention (CDC) and pertains to provisional COVID-19 deaths in the United States, categorized by date, state, sex, and age groups.The primary objective of this project is to address the following questions: Does the incidence of COVID-19-related deaths exhibit a temporal decrease over time? To what extent do COVID-19-related deaths vary based on factors such as state, sex, and age group?
+
+## Interactive Visualizations
+
+### 1. Covid-19 Deaths by Date
+
+```{r echo=FALSE, warning=FALSE, class.source="code-r-small"}
+data_p1 <-filter(data, Group == "By Month", State != "United States", Sex == "All Sexes", `Age Group` == "All Ages")
+data_p1$`End Date` <- as.Date(data_p1$`End Date`, format="%m/%d/%Y")
+p1 <- ggplot(data_p1, aes(x= `End Date`, y= `COVID-19 Deaths`, color = State)) + geom_line()+ geom_point(size= 0.5, alpha =0.5)+ xlab("Date")
+p1 <- ggplotly(p1)
+p1
+```
+
+The initial chart comprises a line plot depicting COVID-19 death cases over the date range from January 2020 to November 2022. Each distinct color within the plot corresponds to a different state, allowing for an examination of the distribution of cases across states over time. Notably, the chart reveals a discernible trend in the overall number of deaths from 2020 to 2022, exhibiting an initial increase followed by a subsequent decline. The data peaks in early 2021, with more recent death data (end of 2022) significantly lower than the levels observed during the initial spread of the virus in 2020. This suggests a substantial reduction in the death rate from COVID-19 over the specified period.
+
+When considering individual states, the region with the highest number of deaths in 2020 is New York City, as indicated by the elevated blue lines, reflecting the proximity to New York State. Post-2020, California's data experienced a rapid ascent, reaching its peak in the early part of 2021. Towards the end of 2021, there is a subsequent decline in California, with Florida and Texas emerging as states with the highest peaks. This nuanced analysis provides insights into the temporal and regional dynamics of COVID-19 death cases, offering a comprehensive view of the evolving trends across states.
+
+### 2. Covid-19 Deaths by Ages
+
+```{r echo=FALSE, warning=FALSE, class.source="code-r-small"}
+p2<-cleaning%>%
+ggplot(aes(x=`COVID-19 Deaths`, y=fct_reorder(`Age Group`, `COVID-19 Deaths`),fill=Sex))+ geom_col(position= "dodge")+ ylab("Age Groups")
+p2 <- ggplotly(p2)
+p2
+```
+
+The chart reveals a conspicuous upward trend in the number of death cases with advancing age. Notably, the bars of various colors in the figure denote different genders, with blue representing males and red representing females. Upon closer examination, it becomes evident that, except for the age groups 55-64 and those aged over 85, the majority of other age groups exhibit a higher incidence of male deaths compared to females. This gender-related disparity is clearly illustrated in the graph, highlighting a nuanced demographic pattern within the distribution of COVID-19-related fatalities across age and gender categories.
+
+### 3. Covid-19 Deaths by Total Deaths
+
+```{r echo=FALSE, warning=FALSE, class.source="code-r-small"}
+cleaning %>%
+  plot_ly(x= ~`COVID-19 Deaths`, y= ~`Total Deaths`, 
+          type = 'scatter',
+          mode = 'markers',
+          color = ~State,
+          marker = list(sizemode = 'sex', opacity= 0.5))
+```
+
+This plot illustrates the relationship between the number of COVID-19 deaths and the total number of deaths. Notably, a discernible correlation exists between these two variables. As the total number of deaths increases, the count of COVID-19 deaths exhibits a pattern of close-to-linear growth. This observation suggests a proportional relationship between the overall mortality rate and the specific impact of COVID-19.
+
+Examining the plot from a state-specific perspective further highlights the utility of this interactive visualization in identifying outlier data points. These distinctive observations contribute to a nuanced understanding of the variability in COVID-19-related fatalities across different states, emphasizing the significance of considering both total and COVID-19-specific mortality rates in comprehensive analyses.
+
+### 4. Covid-19 Deaths Counts under 250
+
+```{r echo=FALSE, warning=FALSE, class.source="code-r-small"}
+data_p3 <- cleaning[`COVID-19 Deaths`<250]
+data_p3 <- data_p3[`COVID-19 Deaths`>0]
+p3<- data_p3%>% ggplot(aes(x=`COVID-19 Deaths`, fill=Sex))+ geom_histogram(position= "dodge",binwidth = 5)
+p3 <- ggplotly(p3)
+p3
+```
+
+In the analysis of sex groups, the subsequent figure presents a histogram of death cases differentiated by gender. To enhance clarity, the figure exclusively displays data with death case counts below 250, as the majority of observations in the dataset fall within this range. This approach facilitates a more intuitive indication of the gender distribution in the dataset. The histogram unmistakably illustrates that, for death cases below 250, there is a prevalent predominance of males over females.
+
+By synthesizing the insights garnered from the visualizations above, it becomes evident that, over the three-year period spanning from 2020 to 2022, the dataset reflects a higher incidence of COVID-19-related deaths among males than females. This comprehensive observation underscores the importance of considering gender disparities when examining the demographic patterns of COVID-19 fatalities.
+
+## Conclusion
+
+Over the course of the past three years, the number of COVID-19 deaths has exhibited fluctuations, indicating an upward trajectory until the inception of 2021, followed by a discernible decline. An analysis of individual states reveals that California, Texas, and Florida consistently occupy the top three positions in terms of total COVID-19 death data. Notably, New York City, California, and Florida have all experienced peaks in COVID-19 deaths at different junctures.
+
+The distribution of COVID-19 death cases reveals an age-related increase, with higher age groups demonstrating a higher incidence of fatalities. Furthermore, when considering gender, a predominant pattern emerges wherein the total number and proportion of COVID-19 deaths within the male demographic surpass those within the female demographic. These multifaceted observations offer valuable insights into the temporal, geographical, age-related, and gender-related dynamics of COVID-19 fatalities over the specified three-year period.

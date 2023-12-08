@@ -1,0 +1,66 @@
+---
+title: "Appendix"
+output: html_document
+---
+
+# Tables
+
+## 2020
+
+```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
+library(data.table)
+library(lubridate)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(knitr)
+data <- data.table::fread("data/Provisional_COVID-19_Deaths_by_Sex_and_Age.csv")
+```
+
+```{r echo=FALSE, warning= FALSE}
+data_clean <- select(data, 3:11)
+data_clean <- filter(data_clean, Group == "By Month", State != "United States", Sex != "All Sexes", `Age Group` != "All Ages")
+data_clean <- data_clean[!is.na(`COVID-19 Deaths`)]
+data_clean <- data_clean[!is.na(`Total Deaths`)]
+```
+
+```{r echo=FALSE, warning=FALSE}
+t1<-data_clean %>% group_by(Month)%>%filter(Year == 2020)%>%
+  summarise(
+    Total_Death_Cases = sum(`COVID-19 Deaths`, na.rm= TRUE),
+    Avg_Death_Cases   = mean(`COVID-19 Deaths`, na.rm= TRUE), 
+    Min_Death_Cases   = min(`COVID-19 Deaths`, na.rm= TRUE),
+    Max_Death_Cases   = max(`COVID-19 Deaths`, na.rm= TRUE)
+  )
+t1[3] <- round(t1$Avg_Death_Cases, digits = 0)
+datatable(t1)
+```
+
+## 2021
+
+```{r echo=FALSE, warning=FALSE}
+t2<-data_clean %>% group_by(Month)%>%filter(Year == 2021)%>%
+  summarise(
+    Total_Death_Cases = sum(`COVID-19 Deaths`, na.rm= TRUE),
+    Avg_Death_Cases   = mean(`COVID-19 Deaths`, na.rm= TRUE), 
+    Min_Death_Cases   = min(`COVID-19 Deaths`, na.rm= TRUE),
+    Max_Death_Cases   = max(`COVID-19 Deaths`, na.rm= TRUE)
+  )
+t2[3] <- round(t2$Avg_Death_Cases, digits = 0)
+datatable(t2)
+```
+
+## 2022
+
+```{r echo=FALSE, warning=FALSE}
+t3<-data_clean %>% group_by(Month)%>%filter(Year == 2022)%>%
+  summarise(
+    Total_Death_Cases = sum(`COVID-19 Deaths`, na.rm= TRUE),
+    Avg_Death_Cases   = mean(`COVID-19 Deaths`, na.rm= TRUE), 
+    Min_Death_Cases   = min(`COVID-19 Deaths`, na.rm= TRUE),
+    Max_Death_Cases   = max(`COVID-19 Deaths`, na.rm= TRUE)
+  )
+t3[3] <- round(t3$Avg_Death_Cases, digits = 0)
+datatable(t3)
+```
